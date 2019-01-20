@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:jdbc="http://www.springframework.org/schema/jdbc" xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:jpa="http://www.springframework.org/schema/data/jpa"
+       xsi:schemaLocation="
+      http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+      http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd
+      http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+      http://www.springframework.org/schema/jdbc http://www.springframework.org/schema/jdbc/spring-jdbc.xsd
+      http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd
+      http://www.springframework.org/schema/data/jpa
+      http://www.springframework.org/schema/data/jpa/spring-jpa.xsd">
+
+    <!--spring 和 spring data jpa的配置-->
+    <!--数据源datasource-->
+    <bean id="dataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource">
+        <property name="driverClass" value="com.mysql.jdbc.Driver" />
+        <property name="jdbcUrl" value="jdbc:mysql:///spring_data_jpa?serverTimezone=UTC"/>
+        <property name="user" value="root"/>
+        <property name="password" value="123456" />
+    </bean>
+    
+    <!--entityManager-->
+    <bean id="entityManagerFactory" class="org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean">
+        <property name="dataSource" ref="dataSource"/>
+        <property name="packagesToScan" value="com.lee.bean" />
+
+
+        <!--provider-->
+        <property name="persistenceProvider">
+            <bean class="org.hibernate.jpa.HibernatePersistenceProvider"/>
+        </property>
+        <!--（4）jpa的供应商适配器，用来定义hibenrate的属性 -->
+        <property name="jpaVendorAdapter">
+            <bean  class="org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter">
+                <!--是否控制台显示Sql语句-->
+                <property name="showSql" value="true"/>
+                <!--是否自动创建数据库表-->
+                <property name="generateDdl" value="true" />
+                <!--指定数据库类型-->
+                <property name="database" value="MYSQL" />
+                <!--sql方言-->
+                <property name="databasePlatform" value="org.hibernate.dialect.MySQLDialect"/>
+            </bean>
+        </property>
+
+        <!--jpa方言-->
+        <!--（5）jpa的方言 ：高级的特性（例如hibernate的一级、二级缓存，只要配置，springdatajpa也就存在了 -->
+        <property name="jpaDialect" >
+            <bean class="org.springframework.orm.jpa.vendor.HibernateJpaDialect"/>
+        </property>
+    </bean>
+
+<jpa:repositories base-package="com.lee.dao" transaction-manager-ref="transactionManager" entity-manager-factory-ref="entityManagerFactory">
+</jpa:repositories>
+
+    <!--4.声明式事务 -->
+    <!--(1).配置事务管理器 -->
+    <bean id="transactionManager" class="org.springframework.orm.jpa.JpaTransactionManager">
+        <property name="entityManagerFactory" ref="entityManagerFactory"></property>
+    </bean>
+
+    <!-- (2).配置通知txAdvice-->
+    <tx:advice id="txAdvice" transaction-manager="transactionManager">
+        <tx:attributes>
+            <tx:method name="save*" propagation="REQUIRED"/>
+            <tx:method name="insert*" propagation="REQUIRED"/>
+            <tx:method name="update*" propagation="REQUIRED"/>
+            <tx:method name="delete*" propagation="REQUIRED"/>
+            <tx:method name="get*" read-only="true"/>
+            <tx:method name="find*" read-only="true"/>
+            <tx:method name="*" propagation="REQUIRED"/>
+        </tx:attributes>
+    </tx:advice>
+
+    <!-- （3）.配置aop-->
+    <aop:config>
+        <aop:pointcut id="pointcut" expression="execution(* com.itheima.service..*.*(..))" />
+        <aop:advisor advice-ref="txAdvice" pointcut-ref="pointcut" />
+    </aop:config>
+
+    <!-- 5. 配置包扫描，可以使用注解的IOC（如果使用spring junit测试，该行代码可以不写）-->
+    <context:component-scan base-package="com.lee" ></context:component-scan>
+
+
+</beans>
